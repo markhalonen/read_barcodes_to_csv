@@ -439,10 +439,10 @@ main {
   min-height: 46px;
 }
 
-.manual-error {
+.manual-note {
   margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--danger);
+  font-size: 12px;
+  color: var(--text-dim);
 }
 
 /* ------------------------------------------------------------------ footer */

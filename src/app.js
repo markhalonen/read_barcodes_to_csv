@@ -1,4 +1,4 @@
-import { parsePayload, parseManual, toCsv } from './serial.js';
+import { parsePayload, normalizeManual, toCsv } from './serial.js';
 import { initDecoder, decodeFrame } from './decoder.js';
 import {
   startCamera,
@@ -40,7 +40,6 @@ const ui = {
   empty: el('empty'),
   manualInput: el('manual-input'),
   manualBtn: el('manual-btn'),
-  manualError: el('manual-error'),
   exportBtn: el('export-btn'),
   copyBtn: el('copy-btn'),
   clearBtn: el('clear-btn'),
@@ -301,13 +300,11 @@ async function copySerials() {
 // -------------------------------------------------------------------- manual
 
 function submitManual() {
-  const serial = parseManual(ui.manualInput.value);
-  if (!serial) {
-    ui.manualError.textContent = 'Expected format: 2504-027-060-0026';
-    ui.manualError.hidden = false;
-    return;
-  }
-  ui.manualError.hidden = true;
+  // Whatever the user typed is accepted as-is. This is the escape hatch for
+  // labels the scanner cannot read, so it must never turn one away.
+  const serial = normalizeManual(ui.manualInput.value);
+  if (!serial) return; // empty field — nothing to add
+
   const result = recordSerial(serial, 'manual');
   if (result === 'added') ui.manualInput.value = '';
 }
@@ -327,9 +324,6 @@ ui.torchBtn.addEventListener('click', async () => {
 ui.manualBtn.addEventListener('click', submitManual);
 ui.manualInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') submitManual();
-});
-ui.manualInput.addEventListener('input', () => {
-  ui.manualError.hidden = true;
 });
 
 ui.exportBtn.addEventListener('click', exportCsv);

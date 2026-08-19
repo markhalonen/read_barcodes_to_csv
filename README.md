@@ -37,6 +37,11 @@ Anything that won't read — a scuffed or out-of-focus label — can be typed in
 **Add by hand**. Typed entries are tagged `TYPED` in the list and marked
 `manual` in the CSV, because they have not been checksum-verified.
 
+That field accepts whatever you type; it never rejects input. Dashes are
+optional — 14 bare digits are grouped into `nnnn-nnn-nnn-nnnn` automatically, so
+it can be typed straight through. It is the fallback for labels the scanner
+cannot read, so turning entries away would defeat its purpose.
+
 Scans are saved to `localStorage` as you go, so a screen lock or an accidental
 refresh will not lose the session. They stay on the device; nothing is uploaded.
 

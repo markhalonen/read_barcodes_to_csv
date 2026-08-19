@@ -55,19 +55,22 @@
         <div class="manual">
           <label class="manual-label" for="manual-input">Add by hand</label>
           <div class="manual-row">
+            <!-- No inputmode="numeric": on iOS that keypad has no dash key, so
+                 the field could not produce the very format it expects. A plain
+                 text keyboard has one, and typing 14 bare digits auto-groups. -->
             <input
               class="input"
               id="manual-input"
               type="text"
-              inputmode="numeric"
               autocomplete="off"
               autocapitalize="off"
+              autocorrect="off"
               spellcheck="false"
               placeholder="2504-027-060-0026"
             />
             <button class="btn" id="manual-btn" type="button">Add</button>
           </div>
-          <p class="manual-error" id="manual-error" role="alert" hidden></p>
+          <p class="manual-note">Dashes optional — 14 digits are grouped for you.</p>
         </div>
 
         <button class="btn btn--danger btn--sm" id="clear-btn" type="button" disabled>

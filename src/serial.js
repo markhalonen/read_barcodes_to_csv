@@ -60,16 +60,31 @@ export function parsePayload(raw) {
 }
 
 /**
- * Validate a hand-typed serial. Manual entries have no check character to
- * verify against, so we only enforce the format — the UI marks these as
- * `manual` so they stay visually distinct from checksum-verified scans.
+ * Clean up a hand-typed serial.
  *
- * Tolerates spaces and en/em dashes, which phone keyboards produce readily.
+ * Deliberately permissive: this is the fallback for labels the scanner cannot
+ * read, so refusing input that doesn't match SERIAL_RE would leave no way to
+ * record a damaged or unusual label. Anything non-empty is accepted and tagged
+ * `manual`, which already marks it as not checksum-verified.
+ *
+ * Two conveniences, neither of which can reject input:
+ *  - spaces and en/em dashes (what phone keyboards produce) are normalised
+ *  - a bare run of 14 digits is grouped into nnnn-nnn-nnn-nnnn, so the serial
+ *    can be typed on a numeric keypad without hunting for a dash key
+ *
+ * @returns {string | null} null only when the input is empty
  */
-export function parseManual(input) {
+export function normalizeManual(input) {
   if (typeof input !== 'string') return null;
+
   const cleaned = input.trim().replace(/\s+/g, '').replace(/[‐-―]/g, '-');
-  return SERIAL_RE.test(cleaned) ? cleaned : null;
+  if (!cleaned) return null;
+
+  const digits = cleaned.replace(/-/g, '');
+  if (/^\d{14}$/.test(digits)) {
+    return `${digits.slice(0, 4)}-${digits.slice(4, 7)}-${digits.slice(7, 10)}-${digits.slice(10)}`;
+  }
+  return cleaned;
 }
 
 /** RFC 4180 CSV field escaping. */
