@@ -1,0 +1,5 @@
+.DS_Store
+node_modules/
+
+# Reference photos of real labels — kept local, not published.
+sample_data/

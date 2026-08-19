@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#101418" />
+    <meta name="description" content="Scan Code 39 serial-number labels with your phone camera and export a CSV." />
+    <title>Serial Scanner</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#127981;</text></svg>"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <h1 class="title">Serial Scanner</h1>
+      <p class="subtitle">Code 39 · checksum verified</p>
+    </header>
+
+    <main>
+      <section class="scanner">
+        <div class="frame" id="frame">
+          <video id="video" playsinline muted autoplay></video>
+          <div class="reticle" id="reticle" aria-hidden="true"></div>
+          <p class="hint" id="hint">Point the camera at the barcode on the gray label.</p>
+          <div class="toast" id="toast" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn--primary" id="start-btn" type="button">Start scanning</button>
+          <button class="btn" id="stop-btn" type="button" hidden>Stop</button>
+          <button class="btn btn--icon" id="torch-btn" type="button" aria-pressed="false" hidden>
+            Torch
+          </button>
+        </div>
+
+        <p class="error" id="error" role="alert" hidden></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Scanned <span class="badge" id="count">0</span></h2>
+          <div class="panel-actions">
+            <button class="btn btn--sm" id="copy-btn" type="button" disabled>Copy</button>
+            <button class="btn btn--sm btn--primary" id="export-btn" type="button" disabled>
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <p class="empty" id="empty">Nothing scanned yet.</p>
+        <ul class="list" id="list"></ul>
+
+        <div class="manual">
+          <label class="manual-label" for="manual-input">Add by hand</label>
+          <div class="manual-row">
+            <input
+              class="input"
+              id="manual-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="2504-027-060-0026"
+            />
+            <button class="btn" id="manual-btn" type="button">Add</button>
+          </div>
+          <p class="manual-error" id="manual-error" role="alert" hidden></p>
+        </div>
+
+        <button class="btn btn--danger btn--sm" id="clear-btn" type="button" disabled>
+          Clear all
+        </button>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Scans stay on this device. Nothing is uploaded.</p>
+    </footer>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
