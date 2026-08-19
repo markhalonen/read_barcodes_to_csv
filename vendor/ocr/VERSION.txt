@@ -1,0 +1,12 @@
+PaddleOCR PP-OCRv4 running on onnxruntime-web.
+
+ocr.bundle.mjs  esbuild bundle of @gutenye/ocr-browser 1.4.8 + onnxruntime-web
+                1.27.0, committed prebuilt so the site needs no build step.
+                Exports { Ocr, ortEnv }.
+models/         @gutenye/ocr-models 1.4.2 (PP-OCRv4 detection + recognition,
+                PP-OCR mobile v2.0 angle classifier, Chinese/ASCII dictionary)
+ort-wasm-simd-threaded.wasm
+                onnxruntime-web 1.27.0 WASM kernel.
+
+Threads are disabled at runtime: SharedArrayBuffer needs COOP/COEP headers,
+which GitHub Pages cannot send.

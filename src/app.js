@@ -8,6 +8,7 @@ import {
   setTorch,
   DECODE_WIDTHS,
 } from './camera.js';
+import { readSerial } from './ocr.js';
 import { ScanStore } from './store.js';
 import { initFeedback, beepSuccess, beepDuplicate } from './feedback.js';
 
@@ -35,6 +36,7 @@ const ui = {
   startBtn: el('start-btn'),
   stopBtn: el('stop-btn'),
   torchBtn: el('torch-btn'),
+  ocrBtn: el('ocr-btn'),
   count: el('count'),
   list: el('list'),
   empty: el('empty'),
@@ -48,6 +50,9 @@ const ui = {
 
 const store = new ScanStore();
 const canvas = document.createElement('canvas');
+// Separate canvas: OCR runs at a higher resolution than the barcode loop and
+// must not disturb the frame the loop is mid-way through reading.
+const ocrCanvas = document.createElement('canvas');
 
 let stream = null;
 let scanning = false;
@@ -55,6 +60,7 @@ let wakeLock = null;
 let lastDecodeAt = 0;
 let toastTimer = null;
 let scaleIndex = 0;
+let ocrBusy = false;
 /** serial -> performance.now() of last report, for REPEAT_COOLDOWN_MS. */
 const recentlyReported = new Map();
 
@@ -81,15 +87,20 @@ function renderList() {
       serial.className = 'row-serial';
       serial.textContent = record.serial;
 
-      // Scans are checksum-verified; typed entries cannot be, and the list must
-      // not imply otherwise. A tick is enough for the verified case and leaves
-      // room for the full serial on a narrow phone.
+      // Only a barcode scan clears the Code 39 checksum. OCR and hand-typed
+      // entries cannot be verified, and the list must not imply otherwise: a
+      // tick means proven, anything else names how it got here.
+      const LABELS = {
+        scan: { text: '✓', title: 'Checksum verified' },
+        ocr: { text: 'OCR', title: 'Read from the printed digits — not checksum verified' },
+        manual: { text: 'typed', title: 'Entered by hand — not checksum verified' },
+      };
+      const { text, title } = LABELS[record.source] ?? LABELS.manual;
       const tag = document.createElement('span');
-      const verified = record.source === 'scan';
       tag.className = `row-tag row-tag--${record.source}`;
-      tag.textContent = verified ? '✓' : 'typed';
-      tag.title = verified ? 'Checksum verified' : 'Entered by hand — not checksum verified';
-      tag.setAttribute('aria-label', tag.title);
+      tag.textContent = text;
+      tag.title = title;
+      tag.setAttribute('aria-label', title);
 
       const remove = document.createElement('button');
       remove.className = 'row-remove';
@@ -186,6 +197,48 @@ function scheduleTick() {
   }
 }
 
+/**
+ * Read the printed serial from the current frame.
+ *
+ * Unlike a barcode scan there is no check character to validate against, so the
+ * result is stored as `ocr` and shown unverified rather than being presented as
+ * confirmed. The user sees what was read and can delete it if it looks wrong.
+ */
+async function readTextFromFrame() {
+  if (!scanning || ocrBusy) return;
+  ocrBusy = true;
+  ui.ocrBtn.disabled = true;
+  const restore = ui.hint.textContent;
+
+  try {
+    // Capture at the ROI's native resolution; ocr.js does its own scaling,
+    // and pre-shrinking here would throw away detail it wants.
+    const frame = grabRoi(ui.video, ocrCanvas, Number.MAX_SAFE_INTEGER);
+    if (!frame) return;
+
+    const result = await readSerial(ocrCanvas, (stage) => {
+      ui.hint.textContent = stage;
+    });
+
+    if (!result) {
+      // Either nothing was found or the scales disagreed. Both mean the frame
+      // was marginal, and both are better reported than guessed at.
+      toast('Could not read it — move closer or type it', 'err');
+      return;
+    }
+    // Suppress the barcode loop's own feedback if it lands on the same label.
+    recentlyReported.set(result.serial, performance.now());
+    recordSerial(result.serial, 'ocr');
+  } catch (err) {
+    console.error('OCR failed', err);
+    toast('Text reader failed to load', 'err');
+  } finally {
+    ocrBusy = false;
+    ui.ocrBtn.disabled = false;
+    ui.hint.textContent = restore;
+  }
+}
+
 async function requestWakeLock() {
   try {
     wakeLock = (await navigator.wakeLock?.request('screen')) ?? null;
@@ -215,6 +268,7 @@ async function start() {
     // Both ends of the barcode, quiet zones included, must sit inside the box:
     // testing showed a barcode wider than the box is clipped and never decodes.
     ui.hint.textContent = 'Fit the whole barcode inside the box.';
+    ui.ocrBtn.hidden = false;
     ui.torchBtn.hidden = !hasTorch(stream);
     ui.torchBtn.setAttribute('aria-pressed', 'false');
 
@@ -258,6 +312,7 @@ function stop() {
   ui.startBtn.hidden = false;
   ui.stopBtn.hidden = true;
   ui.torchBtn.hidden = true;
+  ui.ocrBtn.hidden = true;
   ui.hint.textContent = 'Camera off.';
 }
 
@@ -320,6 +375,8 @@ ui.torchBtn.addEventListener('click', async () => {
     ui.torchBtn.setAttribute('aria-pressed', String(!on));
   }
 });
+
+ui.ocrBtn.addEventListener('click', readTextFromFrame);
 
 ui.manualBtn.addEventListener('click', submitManual);
 ui.manualInput.addEventListener('keydown', (event) => {

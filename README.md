@@ -33,7 +33,11 @@ agree.
 Getting *too close* is the most common failure: if the barcode is wider than the
 aim box it gets clipped and will never decode. Back off slightly.
 
-Anything that won't read — a scuffed or out-of-focus label — can be typed into
+If the barcode won't catch, tap **Barcode won't read? Read the digits** — that
+runs OCR on the printed serial instead. It has no check character to verify
+against, so those rows are tagged `OCR` and marked `ocr` in the CSV.
+
+Anything that still won't read can be typed into
 **Add by hand**. Typed entries are tagged `TYPED` in the list and marked
 `manual` in the CSV, because they have not been checksum-verified.
 
@@ -87,6 +91,7 @@ the camera works there too.
 | --- | --- |
 | `src/serial.js` | Payload parsing, mod-43 checksum, CSV generation |
 | `src/decoder.js` | zxing-wasm setup and frame decoding |
+| `src/ocr.js` | PaddleOCR fallback for unreadable barcodes |
 | `src/camera.js` | Camera start/stop, torch, aim-box cropping |
 | `src/store.js` | Scan list with `localStorage` write-through |
 | `src/feedback.js` | Beeps and haptics |
@@ -114,19 +119,44 @@ It was chosen over `@zxing/library` (the pure-JS port) and Quagga2 after
 measuring all three against sample photos: on the same image zxing-wasm decoded
 in ~20 ms where the JS port needed a 51-variant scale/rotation sweep and 4.7 s.
 
-### Why there is no OCR fallback
+### OCR fallback
 
-An earlier version read the printed digits with Tesseract when the barcode
-failed. It was removed: the labels use slashed zeros (Ø), which Tesseract
-misread as `8` — turning `2602-027-080-0052` into `2602-027-080-8052`. The
-checksum caught it, but a fallback that is usually wrong is not a fallback. In
-live scanning a bad frame costs nothing, so retrying and typing the rare
-unreadable label is both simpler and more trustworthy.
+`src/ocr.js`, loaded only when the button is tapped — the runtime and models are
+~38 MB, cached after the first use.
 
-Note that badly out-of-focus labels may not decode at all — no free decoder read
-the blurriest sample in 300+ preprocessing variants. Type those by hand.
+**PaddleOCR PP-OCRv4** on onnxruntime-web, chosen after measuring it against
+Tesseract.js on these labels. Tesseract managed 3 correct reads out of 80
+preprocessing/page-segmentation combinations; every error landed in the
+double-struck last group, reading the slashed zeros as `8`. Ensembling made it
+worse — the plurality answer across all 80 runs was *wrong*:
+
+```
+14x  2602-027-100-8826      <- plurality winner, wrong
+ 9x  2602-027-100-0826
+ 5x  2602-027-100-8026
+ 3x  2602-027-100-0026      <- correct, 4th place
+```
+
+PaddleOCR read every sample correctly from the raw frame with no preprocessing,
+including the blurriest label, which no barcode decoder has ever managed.
+
+Two things that matter if you touch this:
+
+- **Bigger input is not better.** PP-OCRv4 rescales internally to ~960px and its
+  resampling is worse than doing the downscale first. Every measured misread
+  (`...100-0626`, `...080-6052`) happened at 1200px or above; everything from
+  640px to 1040px was correct. Hence `OCR_WIDTHS`.
+- **There is no checksum here.** OCR reads the printed digits, which carry no
+  check character, and confidence is not a substitute — the misreads scored
+  0.95. Instead the frame is read at three scales and a result is only returned
+  when they agree. On the samples that gives 10/10 correct with nothing wrong
+  accepted; a disagreement asks the user to retake rather than guessing.
 
 ## Browser support
 
 Needs `getUserMedia` and WebAssembly: iOS Safari 15+, Chrome/Android, desktop
 Chrome/Edge/Safari. Torch control is Android-only; iOS does not expose it.
+
+The repo carries ~40 MB of vendored runtimes and models. Barcode scanning needs
+only ~1 MB of that; the rest is the OCR fallback and is not fetched until you
+use it.

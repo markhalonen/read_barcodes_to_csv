@@ -35,6 +35,12 @@
           </button>
         </div>
 
+        <!-- Fallback for labels the barcode will not read. Downloads ~38 MB of
+             models on first use, so it stays hidden until scanning starts. -->
+        <button class="btn btn--ghost" id="ocr-btn" type="button" hidden>
+          Barcode won't read? Read the digits
+        </button>
+
         <p class="error" id="error" role="alert" hidden></p>
       </section>
 

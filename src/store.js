@@ -6,7 +6,7 @@
 
 const STORAGE_KEY = 'serial-scanner.scans.v1';
 
-/** @typedef {{serial: string, source: 'scan'|'manual', at: string}} Record */
+/** @typedef {{serial: string, source: 'scan'|'ocr'|'manual', at: string}} Record */
 
 export class ScanStore extends EventTarget {
   #records = [];

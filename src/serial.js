@@ -95,6 +95,11 @@ function csvField(value) {
 
 /**
  * Render scan records as CSV.
+ *
+ * `source` distinguishes what can be trusted: `scan` cleared the Code 39
+ * checksum, while `ocr` and `manual` could not be verified and are worth a
+ * glance before the CSV is relied on.
+ *
  * @param {Array<{serial: string, source: string, at: string}>} records
  */
 export function toCsv(records) {

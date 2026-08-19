@@ -259,6 +259,23 @@ main {
   color: #2a1d00;
 }
 
+/* Secondary action: present but visually quieter than Start/Stop, since the
+   barcode path is the one that should be reached for first. */
+.btn--ghost {
+  width: 100%;
+  margin-top: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--text-dim);
+  border-style: dashed;
+}
+
+.btn--ghost:disabled {
+  opacity: 0.5;
+}
+
 .error {
   margin: 12px 0 0;
   padding: 11px 13px;
@@ -375,6 +392,7 @@ main {
   padding: 2px 7px;
 }
 
+.row-tag--ocr,
 .row-tag--manual {
   background: rgba(251, 191, 36, 0.16);
   color: var(--warn);
